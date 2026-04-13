@@ -4,29 +4,30 @@ import { GameView } from "../../../core/game/GameView";
 import { crazyGamesSDK } from "../../CrazyGamesSDK";
 import { Layer } from "./Layer";
 
-const AD_TYPE = "standard_iab_left1";
-const AD_CONTAINER_ID = "in-game-bottom-left-ad";
-const BOTTOM_RAIL_TYPE = "bottom_rail";
+const AD_TYPES = [
+  { type: "standard_iab_left1", selectorId: "in-game-bottom-left-ad" },
+  { type: "standard_iab_left3", selectorId: "in-game-bottom-left-ad3" },
+  { type: "standard_iab_left4", selectorId: "in-game-bottom-left-ad4" },
+];
 
 @customElement("in-game-promo")
 export class InGamePromo extends LitElement implements Layer {
   public game: GameView;
 
   private shouldShow: boolean = false;
-  private bottomRailActive: boolean = false;
+  private bottomRailDestroyed: boolean = false;
   private cornerAdShown: boolean = false;
 
   createRenderRoot() {
     return this;
   }
 
-  init() {
-    this.showBottomRail();
-  }
+  init() {}
 
   tick() {
     if (!this.game.inSpawnPhase()) {
-      if (this.bottomRailActive) {
+      if (!this.bottomRailDestroyed) {
+        this.bottomRailDestroyed = true;
         this.destroyBottomRail();
       }
       if (!this.cornerAdShown) {
@@ -37,38 +38,12 @@ export class InGamePromo extends LitElement implements Layer {
     }
   }
 
-  private showBottomRail(): void {
-    if (!window.adsEnabled) return;
-    if (!this.game.inSpawnPhase()) return;
-    if (!window.ramp) {
-      console.warn("Playwire RAMP not available for bottom_rail ad");
-      return;
-    }
-
-    this.bottomRailActive = true;
-    try {
-      window.ramp.que.push(() => {
-        try {
-          window.ramp.spaAddAds([{ type: BOTTOM_RAIL_TYPE }]);
-          console.log("Bottom rail ad loaded during spawn phase");
-        } catch (e) {
-          console.error("Failed to add bottom_rail ad:", e);
-        }
-      });
-    } catch (error) {
-      console.error("Failed to load bottom_rail ad:", error);
-    }
-  }
-
   private destroyBottomRail(): void {
-    if (!this.bottomRailActive) return;
-    this.bottomRailActive = false;
-
     if (!window.ramp) return;
 
     try {
-      window.ramp.spaAds({ ads: [], countPageview: false });
-      console.log("Bottom rail ad destroyed via spaAds after spawn phase");
+      window.ramp.destroyUnits("pw-oop-bottom_rail");
+      console.log("Bottom rail ad destroyed after spawn phase");
     } catch (e) {
       console.error("Error destroying bottom_rail ad:", e);
     }
@@ -124,19 +99,19 @@ export class InGamePromo extends LitElement implements Layer {
     try {
       window.ramp.que.push(() => {
         try {
-          window.ramp.spaAddAds([
-            {
-              type: AD_TYPE,
-              selectorId: AD_CONTAINER_ID,
-            },
-          ]);
-          console.log("In-game bottom-left ad loaded:", AD_TYPE);
+          window.ramp.spaAddAds(
+            AD_TYPES.map(({ type, selectorId }) => ({ type, selectorId })),
+          );
+          console.log(
+            "In-game bottom-left ads loaded:",
+            AD_TYPES.map((a) => a.type),
+          );
         } catch (e) {
-          console.error("Failed to add in-game ad:", e);
+          console.error("Failed to add in-game ads:", e);
         }
       });
     } catch (error) {
-      console.error("Failed to load in-game ad:", error);
+      console.error("Failed to load in-game ads:", error);
     }
   }
 
@@ -156,10 +131,12 @@ export class InGamePromo extends LitElement implements Layer {
     }
     this.shouldShow = false;
     try {
-      window.ramp.destroyUnits(AD_TYPE);
-      console.log("successfully destroyed in-game bottom-left ad");
+      for (const { type } of AD_TYPES) {
+        window.ramp.destroyUnits(type);
+      }
+      console.log("successfully destroyed in-game bottom-left ads");
     } catch (e) {
-      console.error("error destroying in-game ad:", e);
+      console.error("error destroying in-game ads:", e);
     }
     this.requestUpdate();
   }
@@ -175,10 +152,14 @@ export class InGamePromo extends LitElement implements Layer {
 
     return html`
       <div
-        id="${AD_CONTAINER_ID}"
-        class="fixed left-0 z-[100] pointer-events-auto"
+        class="fixed left-0 z-[100] pointer-events-auto flex flex-col-reverse"
         style="bottom: -0.7cm"
-      ></div>
+      >
+        ${AD_TYPES.map(
+          ({ selectorId }) =>
+            html`<div id="${selectorId}" style="margin:0;padding:0"></div>`,
+        )}
+      </div>
     `;
   }
 }

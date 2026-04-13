@@ -719,6 +719,10 @@ class Client {
   private async handleJoinLobby(event: CustomEvent<JoinLobbyEvent>) {
     const lobby = event.detail;
     console.log(`joining lobby ${lobby.gameID}`);
+    const homepagePromos = document.querySelector("homepage-promos");
+    if (homepagePromos instanceof HomepagePromos) {
+      homepagePromos.loadBottomRail();
+    }
     if (this.lobbyHandle !== null) {
       console.log("joining lobby, stopping existing game");
       this.lobbyHandle.stop(true);
@@ -864,6 +868,11 @@ class Client {
     }
 
     document.body.classList.remove("in-game");
+
+    const homepagePromos = document.querySelector("homepage-promos");
+    if (homepagePromos instanceof HomepagePromos) {
+      homepagePromos.destroyBottomRail();
+    }
 
     if (this.joinModal.isOpen()) {
       this.joinModal.close();
