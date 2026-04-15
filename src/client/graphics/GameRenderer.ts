@@ -1,6 +1,7 @@
 import { EventBus } from "../../core/EventBus";
 import { GameView } from "../../core/game/GameView";
 import { UserSettings } from "../../core/game/UserSettings";
+import { userAuth } from "../Auth";
 import { GameStartingModal } from "../GameStartingModal";
 import { RefreshGraphicsEvent as RedrawGraphicsEvent } from "../InputHandler";
 import { FrameProfiler } from "./FrameProfiler";
@@ -203,6 +204,12 @@ export function createRenderer(
   playerPanel.initEventBus(eventBus);
   playerPanel.emojiTable = emojiTable;
   playerPanel.uiState = uiState;
+
+  userAuth().then((auth) => {
+    if (auth !== false) {
+      playerPanel.setRole(auth.claims.role ?? null);
+    }
+  });
 
   const chatModal = document.querySelector("chat-modal") as ChatModal;
   if (!(chatModal instanceof ChatModal)) {
